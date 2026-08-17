@@ -19,7 +19,7 @@ The Kotlin SDK targets Android API 21+ and implements
 
 ## Installation
 
-The release workflow publishes version `1.0.0` through GitHub Packages. After
+The release workflow publishes version `1.0.1` through GitHub Packages. After
 the release tag is pushed, add the repository and credentials to your Gradle
 settings, then add the dependency:
 
@@ -37,7 +37,7 @@ repositories {
 
 ```kotlin
 dependencies {
-    implementation("dev.taghizadeh.flextrack:flextrack:1.0.0")
+    implementation("dev.flextrack:flextrack:1.0.1")
 }
 ```
 
@@ -102,11 +102,11 @@ app's private files directory and retries only the destinations still pending.
 ## Release
 
 The tag must match the version in `flextrack/build.gradle.kts`. Pushing a tag
-such as `v1.0.0` verifies the library and publishes it to GitHub Packages:
+such as `v1.0.1` verifies the library and publishes it to GitHub Packages:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.1
+git push origin v1.0.1
 ```
 
 ## License

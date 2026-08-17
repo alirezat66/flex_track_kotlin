@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "dev.taghizadeh.flextrack.sample"
+    namespace = "dev.flextrack.sample"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "dev.taghizadeh.flextrack.sample"
+        applicationId = "dev.flextrack.sample"
         minSdk = 21
         targetSdk = 36
         versionCode = 1
