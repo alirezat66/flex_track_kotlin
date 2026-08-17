@@ -19,5 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "FlexTrack Kotlin"
-include(":app")
+rootProject.name = "flex-track-kotlin"
+include(":flextrack")
+include(":sample")
