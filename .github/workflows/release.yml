@@ -1,0 +1,29 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Verify tag matches SDK version
+        run: test "${GITHUB_REF_NAME#v}" = "$(sed -n 's/version = "\(.*\)"/\1/p' flextrack/build.gradle.kts | head -1)"
+      - name: Verify release
+        run: ./gradlew clean :flextrack:test :flextrack:lint :flextrack:assembleRelease
+      - name: Publish to GitHub Packages
+        run: ./gradlew :flextrack:publishReleasePublicationToGitHubPackagesRepository
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
