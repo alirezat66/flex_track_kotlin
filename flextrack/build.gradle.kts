@@ -4,11 +4,11 @@ plugins {
     `maven-publish`
 }
 
-group = "dev.taghizadeh.flextrack"
-version = "1.0.0"
+group = "dev.flextrack"
+version = "1.0.1"
 
 android {
-    namespace = "dev.taghizadeh.flextrack"
+    namespace = "dev.flextrack"
     compileSdk {
         version = release(36)
     }

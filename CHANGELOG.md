@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.1 - 2026-08-17
+
+### Changed
+
+- Rebrands the public Kotlin packages and Android namespace from
+  `dev.taghizadeh.flextrack` to `dev.flextrack`.
+- Changes Maven coordinates to `dev.flextrack:flextrack:1.0.1`.
+- Updates the sample application ID and imports to the new namespace.
+
+### Migration
+
+Replace imports beginning with `dev.taghizadeh.flextrack` with `dev.flextrack`.
+No runtime behavior or Core Specification semantics changed.
+
 ## 1.0.0 - 2026-08-17
 
 ### Added
