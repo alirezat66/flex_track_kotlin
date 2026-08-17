@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "dev.taghizadeh.flextrack"
-version = "0.1.0-SNAPSHOT"
+version = "1.0.0"
 
 android {
     namespace = "dev.taghizadeh.flextrack"
@@ -56,6 +56,20 @@ dependencies {
 }
 
 publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/alirezat66/flex_track_kotlin")
+            credentials {
+                username = providers.gradleProperty("gpr.user")
+                    .orElse(providers.environmentVariable("GITHUB_ACTOR"))
+                    .orNull
+                password = providers.gradleProperty("gpr.key")
+                    .orElse(providers.environmentVariable("GITHUB_TOKEN"))
+                    .orNull
+            }
+        }
+    }
     publications {
         register<MavenPublication>("release") {
             groupId = project.group.toString()

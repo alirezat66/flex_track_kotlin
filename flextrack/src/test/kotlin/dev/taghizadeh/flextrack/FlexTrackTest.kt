@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 class FlexTrackTest {
     @Test
     fun `package metadata identifies SDK and contract versions`() {
-        assertEquals("0.1.0-SNAPSHOT", FlexTrack.VERSION)
+        assertEquals("1.0.0", FlexTrack.VERSION)
         assertEquals("1.0.0", FlexTrack.CORE_SPEC_VERSION)
     }
 }
