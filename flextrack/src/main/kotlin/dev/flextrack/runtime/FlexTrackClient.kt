@@ -2,6 +2,10 @@ package dev.flextrack.runtime
 
 import dev.flextrack.event.FlexEvent
 import dev.flextrack.event.TransformerPipeline
+import dev.flextrack.logging.FlexTrackLogger
+import dev.flextrack.logging.NoOpFlexTrackLogger
+import dev.flextrack.logging.includesPropertyValues
+import dev.flextrack.logging.safeLog
 import dev.flextrack.routing.ConsentState
 import dev.flextrack.routing.RoutingEngine
 import kotlinx.coroutines.async
@@ -17,10 +21,18 @@ public class FlexTrackClient(
     public val transformers: TransformerPipeline = TransformerPipeline(),
     private val consentProvider: () -> ConsentState = { ConsentState() },
     private val onlineProvider: () -> Boolean = { true },
+    private val logger: FlexTrackLogger = NoOpFlexTrackLogger,
 ) {
-    public suspend fun start(): Unit = registry.start()
+    public suspend fun start() {
+        registry.start()
+        val trackerCount = registry.snapshot().size
+        logger.safeLog { "🚀 START trackers=$trackerCount" }
+    }
 
-    public suspend fun shutdown(): Unit = registry.shutdown()
+    public suspend fun shutdown() {
+        registry.shutdown()
+        logger.safeLog { "⏹ SHUTDOWN" }
+    }
 
     public suspend fun register(tracker: Tracker): Unit = registry.register(tracker)
 
@@ -31,9 +43,32 @@ public class FlexTrackClient(
         val trackers = registry.snapshot()
         val routing = routingEngine.route(transformed, consentProvider(), trackers.keys)
         val targets = routing.targetTrackers
+        val propertyKeys = transformed.properties.orEmpty().keys.sorted()
+        logger.safeLog {
+            "🟣 ROUTE ${transformed.name} targets=${targets.renderIds()} " +
+                "properties=${propertyKeys.size} keys=${propertyKeys.renderIds()}"
+        }
+        if (logger.includesPropertyValues()) {
+            logger.safeLog {
+                "🔎 PAYLOAD ${transformed.name} eventId=${transformed.eventId} " +
+                    "values=${transformed.properties.orEmpty()}"
+            }
+        }
+        if (routing.skippedRules.isNotEmpty() || routing.warnings.isNotEmpty()) {
+            val skipped = routing.skippedRules.joinToString(prefix = "[", postfix = "]") {
+                "${it.rule.id ?: "unnamed"}: ${it.reason}"
+            }
+            logger.safeLog {
+                "🟡 SKIPPED ${transformed.name} rules=$skipped warnings=${routing.warnings}"
+            }
+        }
 
         if (!onlineProvider() && targets.isNotEmpty()) {
             queue.enqueue(QueuedEvent(transformed.eventId, transformed, targets))
+            val queueSize = queue.size()
+            logger.safeLog {
+                "🟠 QUEUED ${transformed.name} → ${targets.renderIds()} queue=$queueSize reason=offline"
+            }
             return DispatchResult(transformed, routing, emptyList(), emptyList(), targets)
         }
 
@@ -42,6 +77,10 @@ public class FlexTrackClient(
         val failedIds = failures.map(TrackerFailure::trackerId)
         if (failedIds.isNotEmpty()) {
             queue.enqueue(QueuedEvent(transformed.eventId, transformed, failedIds))
+            val queueSize = queue.size()
+            logger.safeLog {
+                "🟠 QUEUED ${transformed.name} → ${failedIds.renderIds()} queue=$queueSize reason=delivery_failure"
+            }
         }
         return DispatchResult(
             transformed,
@@ -54,7 +93,11 @@ public class FlexTrackClient(
 
     public suspend fun flush(limit: Int = 100): FlushResult {
         require(limit > 0) { "limit must be positive" }
-        if (!onlineProvider()) return FlushResult(0, 0, queue.size())
+        if (!onlineProvider()) {
+            val remaining = queue.size()
+            logger.safeLog { "⚪ OFFLINE flush skipped queue=$remaining" }
+            return FlushResult(0, 0, remaining)
+        }
 
         val items = queue.read(limit)
         val trackers = registry.snapshot()
@@ -65,11 +108,19 @@ public class FlexTrackClient(
             if (failedIds.isEmpty()) {
                 queue.remove(item.id)
                 delivered++
+                logger.safeLog { "🟢 RETRY ${item.event.name} delivered" }
             } else {
                 queue.replace(item.copy(trackerIds = failedIds, attempts = item.attempts + 1))
+                logger.safeLog {
+                    "🔴 RETRY ${item.event.name} pending=${failedIds.renderIds()} attempt=${item.attempts + 1}"
+                }
             }
         }
-        return FlushResult(items.size, delivered, queue.size())
+        val result = FlushResult(items.size, delivered, queue.size())
+        logger.safeLog {
+            "🔵 FLUSH attempted=${result.attemptedEvents} delivered=${result.deliveredEvents} remaining=${result.remainingEvents}"
+        }
+        return result
     }
 
     private suspend fun deliver(
@@ -83,11 +134,17 @@ public class FlexTrackClient(
                 if (tracker == null) {
                     Outcome(id, TrackerFailure(id, IllegalStateException("tracker '$id' is unavailable")))
                 } else {
+                    val startedAt = System.nanoTime()
                     try {
                         tracker.track(event)
+                        val millis = (System.nanoTime() - startedAt) / 1_000_000
+                        logger.safeLog { "🟢 DELIVER ${event.name} → $id ${millis}ms" }
                         Outcome(id)
                     } catch (failure: Throwable) {
                         if (failure is CancellationException) throw failure
+                        logger.safeLog {
+                            "🔴 FAILED ${event.name} → $id error=${failure::class.simpleName ?: "Throwable"}"
+                        }
                         Outcome(id, TrackerFailure(id, failure))
                     }
                 }
@@ -97,3 +154,5 @@ public class FlexTrackClient(
 
     private data class Outcome(val trackerId: String, val failure: TrackerFailure? = null)
 }
+
+private fun List<String>.renderIds(): String = joinToString(prefix = "[", postfix = "]")
