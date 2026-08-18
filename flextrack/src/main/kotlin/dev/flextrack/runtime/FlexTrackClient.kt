@@ -1,6 +1,7 @@
 package dev.flextrack.runtime
 
 import dev.flextrack.event.FlexEvent
+import dev.flextrack.error.TrackerException
 import dev.flextrack.event.TransformerPipeline
 import dev.flextrack.logging.FlexTrackLogger
 import dev.flextrack.logging.NoOpFlexTrackLogger
@@ -135,7 +136,12 @@ public class FlexTrackClient(
             async {
                 val tracker = trackers[id]
                 if (tracker == null) {
-                    Outcome(id, TrackerFailure(id, IllegalStateException("tracker '$id' is unavailable")))
+                    Outcome(id, TrackerFailure(id, TrackerException(
+                        "tracker '$id' is unavailable",
+                        code = "TRACKER_UNAVAILABLE",
+                        trackerId = id,
+                        eventName = event.name,
+                    )))
                 } else {
                     val startedAt = System.nanoTime()
                     try {

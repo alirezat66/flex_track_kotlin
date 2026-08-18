@@ -64,22 +64,40 @@ class AnalyticsTracker : Tracker {
 Configure routing and use the lifecycle-aware client:
 
 ```kotlin
-val group = TrackerGroup("product", listOf("analytics"))
-val client = FlexTrackClient(
-    routingEngine = RoutingEngine(
-        RoutingConfiguration(
-            rules = listOf(RoutingRule(targetGroup = group)),
-        ),
-    ),
-    queue = FileEventQueue(applicationContext),
-    consentProvider = { ConsentState(general = true) },
-)
+val client = flexTrack(applicationContext) {
+    tracker(AnalyticsTracker())
+    persistentQueue()
+    consent { ConsentState(general = true) }
+    routing {
+        defineGroup("product", "analytics")
+        route<PurchaseEvent> { toGroup("product") }
+        routeDefault { toAll() }
+    }
+}
 
-client.register(AnalyticsTracker())
-client.start()
 val result = client.track(PurchaseEvent())
 client.flush()
 client.shutdown()
+```
+
+For versioned consent and automatic user/session enrichment, provide a dynamic
+tracking context instead of a separate consent closure:
+
+```kotlin
+val consent = ConsentManager().apply {
+    setConsents(general = true, analytics = true, version = "2026-08")
+}
+var context = TrackingContext.create(
+    userId = "user-42",
+    sessionId = "session-7",
+    consentManager = consent,
+)
+
+val client = flexTrack(applicationContext) {
+    tracker(AnalyticsTracker())
+    trackingContext { context }
+    routing { routeDefault { toAll() } }
+}
 ```
 
 ### Debug Logcat
@@ -103,6 +121,23 @@ produces no output when the host application is not debuggable.
 All client operations are `suspend` functions. Call them from an application-
 owned coroutine scope. `FileEventQueue` stores failed/offline deliveries in the
 app's private files directory and retries only the destinations still pending.
+
+### Public utilities
+
+`PatternMatcher`, `SamplingUtils`, and `ValidationUtils` provide the public
+Flutter-equivalent helpers with Kotlin-native types. Seeded random sampling is
+reproducible and deterministic sampling uses the shared FNV-1a contract.
+
+### Test trackers and health diagnostics
+
+Use `RecordingTracker` (also available as `MockTracker`) in package or
+integration tests, and `NoOpTracker` when a configured destination must
+intentionally discard events. Both are coroutine-safe. `events()` returns an
+immutable snapshot and `reset()` clears captured events.
+
+Every tracker declares `TrackerCapabilities`; `tracker.diagnostics()` and
+`registry.diagnostics()` expose typed lifecycle and delivery-count snapshots
+for developer tooling without logging event payloads.
 
 ## Modules
 
