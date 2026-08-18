@@ -5,7 +5,7 @@ routing with deterministic cross-SDK behavior.
 
 The Kotlin SDK targets Android API 21+ and implements
 [FlexTrack Core Specification 1.0.0](contract/README.md), shared with
-[FlexTrack Flutter 2.1.0](https://pub.dev/packages/flex_track).
+[FlexTrack Flutter 2.2.0](https://pub.dev/packages/flex_track).
 
 ## Features
 
@@ -82,6 +82,23 @@ client.flush()
 client.shutdown()
 ```
 
+### Debug Logcat
+
+Enable structured diagnostics in debug builds without adding a logging
+framework dependency:
+
+```kotlin
+logger = AndroidLogcatLogger(
+    context = applicationContext,
+    level = FlexTrackLogLevel.BASIC,
+)
+```
+
+Filter Logcat by the `FlexTrack` tag. Routing, delivery, failures, queueing,
+offline skips, retries, and flush summaries are reported. Event properties and
+PII are never included. `AndroidLogcatLogger` produces no output when the host
+application is not debuggable.
+
 All client operations are `suspend` functions. Call them from an application-
 owned coroutine scope. `FileEventQueue` stores failed/offline deliveries in the
 app's private files directory and retries only the destinations still pending.
@@ -91,6 +108,19 @@ app's private files directory and retries only the destinations still pending.
 - `flextrack`: publishable Android library (`AAR`).
 - `sample`: Android application that consumes `flextrack` as a project dependency.
 - `contract`: shared specification and deterministic Flutter/Kotlin fixtures.
+
+### Sample application
+
+The `sample` module is a production-style Compose application using MVVM,
+Hilt, StateFlow, Navigation Compose, and DataStore. It mirrors the Flutter
+example with functional screens for:
+
+- Home event demonstrations and batch tracking
+- E-commerce cart, purchase, and abandonment flows
+- User registration, profile, feature, engagement, and churn journeys
+- Consent, network, runtime status, flushing, and diagnostics
+- Event enrichment with a live event log
+- Persistent offline delivery and selective retry
 
 ## Build
 
