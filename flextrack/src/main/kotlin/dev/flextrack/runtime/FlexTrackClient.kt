@@ -4,7 +4,6 @@ import dev.flextrack.event.FlexEvent
 import dev.flextrack.event.TransformerPipeline
 import dev.flextrack.logging.FlexTrackLogger
 import dev.flextrack.logging.NoOpFlexTrackLogger
-import dev.flextrack.logging.includesPropertyValues
 import dev.flextrack.logging.safeLog
 import dev.flextrack.routing.ConsentState
 import dev.flextrack.routing.RoutingEngine
@@ -12,6 +11,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Runtime entry point for transforming, routing, delivering, and retrying events. */
 public class FlexTrackClient(
@@ -23,6 +24,8 @@ public class FlexTrackClient(
     private val onlineProvider: () -> Boolean = { true },
     private val logger: FlexTrackLogger = NoOpFlexTrackLogger,
 ) {
+    private val flushMutex: Mutex = Mutex()
+
     public suspend fun start() {
         registry.start()
         val trackerCount = registry.snapshot().size
@@ -48,7 +51,7 @@ public class FlexTrackClient(
             "🟣 ROUTE ${transformed.name} targets=${targets.renderIds()} " +
                 "properties=${propertyKeys.size} keys=${propertyKeys.renderIds()}"
         }
-        if (logger.includesPropertyValues()) {
+        if (logger.includesPropertyValues) {
             logger.safeLog {
                 "🔎 PAYLOAD ${transformed.name} eventId=${transformed.eventId} " +
                     "values=${transformed.properties.orEmpty()}"
@@ -91,12 +94,12 @@ public class FlexTrackClient(
         )
     }
 
-    public suspend fun flush(limit: Int = 100): FlushResult {
+    public suspend fun flush(limit: Int = 100): FlushResult = flushMutex.withLock {
         require(limit > 0) { "limit must be positive" }
         if (!onlineProvider()) {
             val remaining = queue.size()
             logger.safeLog { "⚪ OFFLINE flush skipped queue=$remaining" }
-            return FlushResult(0, 0, remaining)
+            return@withLock FlushResult(0, 0, remaining)
         }
 
         val items = queue.read(limit)
@@ -120,7 +123,7 @@ public class FlexTrackClient(
         logger.safeLog {
             "🔵 FLUSH attempted=${result.attemptedEvents} delivered=${result.deliveredEvents} remaining=${result.remainingEvents}"
         }
-        return result
+        result
     }
 
     private suspend fun deliver(

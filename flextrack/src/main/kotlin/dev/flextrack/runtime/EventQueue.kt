@@ -4,6 +4,7 @@ import dev.flextrack.event.FlexEvent
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.Instant
+import java.util.Collections
 
 public data class QueuedEvent(
     val id: String,
@@ -28,20 +29,27 @@ public class InMemoryEventQueue : EventQueue {
     private val items: LinkedHashMap<String, QueuedEvent> = linkedMapOf()
 
     override suspend fun enqueue(item: QueuedEvent): Unit = mutex.withLock {
-        items.putIfAbsent(item.id, item)
+        items.putIfAbsent(item.id, item.withImmutableTrackerIds())
         Unit
     }
 
     override suspend fun read(limit: Int): List<QueuedEvent> = mutex.withLock {
         require(limit > 0) { "limit must be positive" }
-        items.values.take(limit)
+        immutableSnapshot(items.values.take(limit))
     }
 
     override suspend fun replace(item: QueuedEvent): Unit = mutex.withLock {
-        if (item.id in items) items[item.id] = item
+        if (item.id in items) items[item.id] = item.withImmutableTrackerIds()
     }
 
     override suspend fun remove(id: String): Unit = mutex.withLock { items.remove(id); Unit }
 
     override suspend fun size(): Int = mutex.withLock { items.size }
 }
+
+internal fun immutableSnapshot(items: List<QueuedEvent>): List<QueuedEvent> =
+    Collections.unmodifiableList(items.map(QueuedEvent::withImmutableTrackerIds))
+
+private fun QueuedEvent.withImmutableTrackerIds(): QueuedEvent = copy(
+    trackerIds = Collections.unmodifiableList(trackerIds.toList()),
+)

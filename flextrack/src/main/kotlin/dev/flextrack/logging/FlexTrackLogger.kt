@@ -9,6 +9,9 @@ public enum class FlexTrackLogLevel { OFF, BASIC, VERBOSE }
 /** Logging boundary. Implementations must never throw into analytics delivery. */
 public fun interface FlexTrackLogger {
     public fun log(message: String)
+
+    /** Explicit opt-in for payload values. Keep false for production loggers. */
+    public val includesPropertyValues: Boolean get() = false
 }
 
 public object NoOpFlexTrackLogger : FlexTrackLogger {
@@ -22,8 +25,13 @@ public class AndroidLogcatLogger(
     private val tag: String = "FlexTrack",
 ) : FlexTrackLogger {
     private val enabled: Boolean =
-        context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0 &&
-            level != FlexTrackLogLevel.OFF
+        shouldEnableLogcat(
+            isDebuggable = context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0,
+            level = level,
+        )
+
+    override val includesPropertyValues: Boolean
+        get() = enabled && level == FlexTrackLogLevel.VERBOSE
 
     override fun log(message: String) {
         if (!enabled) return
@@ -35,6 +43,7 @@ internal fun FlexTrackLogger.safeLog(message: () -> String) {
     runCatching { log(message()) }
 }
 
-/** Only the debuggable Android logger can opt into event values. */
-internal fun FlexTrackLogger.includesPropertyValues(): Boolean =
-    this is AndroidLogcatLogger && level == FlexTrackLogLevel.VERBOSE
+internal fun shouldEnableLogcat(
+    isDebuggable: Boolean,
+    level: FlexTrackLogLevel,
+): Boolean = isDebuggable && level != FlexTrackLogLevel.OFF

@@ -78,6 +78,37 @@ class FlexTrackClientTest {
     }
 
     @Test
+    fun `partial start failure rolls back and retry starts every tracker`() = runTest {
+        val registry = TrackerRegistry()
+        val healthy = RecordingTracker("healthy")
+        val flaky = RecordingTracker("flaky", startFailures = 1)
+        registry.register(healthy)
+        registry.register(flaky)
+
+        assertTrue(runCatching { registry.start() }.exceptionOrNull() is IllegalStateException)
+        assertEquals(1, healthy.starts)
+        assertEquals(1, healthy.shutdowns)
+
+        registry.start()
+
+        assertEquals(2, healthy.starts)
+        assertEquals(2, flaky.starts)
+    }
+
+    @Test
+    fun `shutdown is idempotent after successful start`() = runTest {
+        val registry = TrackerRegistry()
+        val tracker = RecordingTracker("analytics")
+        registry.register(tracker)
+        registry.start()
+
+        registry.shutdown()
+        registry.shutdown()
+
+        assertEquals(1, tracker.shutdowns)
+    }
+
+    @Test
     fun `consent denial prevents delivery and queueing`() = runTest {
         val tracker = RecordingTracker("analytics")
         val queue = InMemoryEventQueue()
@@ -128,6 +159,29 @@ class FlexTrackClientTest {
 
         assertTrue(messages.any { "ROUTE purchase targets=[] properties=1 keys=[plan]" in it })
         assertTrue(messages.any { "SKIPPED purchase" in it && "Consent requirements not met" in it })
+    }
+
+    @Test
+    fun `property values require explicit verbose logger opt in`() = runTest {
+        val basicMessages = mutableListOf<String>()
+        val verboseMessages = mutableListOf<String>()
+        val basic = client(
+            queue = InMemoryEventQueue(),
+            logger = FlexTrackLogger(basicMessages::add),
+        )
+        val verboseLogger = object : FlexTrackLogger {
+            override val includesPropertyValues: Boolean = true
+            override fun log(message: String) { verboseMessages += message }
+        }
+        val verbose = client(queue = InMemoryEventQueue(), logger = verboseLogger)
+        basic.register(RecordingTracker("analytics"))
+        verbose.register(RecordingTracker("analytics"))
+
+        basic.track(TestEvent())
+        verbose.track(TestEvent())
+
+        assertTrue(basicMessages.none { "secret-value" in it })
+        assertTrue(verboseMessages.any { "PAYLOAD purchase" in it && "secret-value" in it })
     }
 
     @Test
@@ -196,12 +250,19 @@ class FlexTrackClientTest {
     private class RecordingTracker(
         override val id: String,
         var fail: Boolean = false,
+        var startFailures: Int = 0,
     ) : Tracker {
         val events = mutableListOf<FlexEvent>()
         var starts = 0
         var shutdowns = 0
 
-        override suspend fun start() { starts++ }
+        override suspend fun start() {
+            starts++
+            if (startFailures > 0) {
+                startFailures--
+                error("start failed")
+            }
+        }
         override suspend fun track(event: FlexEvent) {
             if (fail) error("delivery failed")
             events += event

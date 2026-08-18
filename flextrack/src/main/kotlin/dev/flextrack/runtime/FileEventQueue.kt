@@ -34,7 +34,9 @@ public class FileEventQueue(
 
     override suspend fun read(limit: Int): List<QueuedEvent> {
         require(limit > 0) { "limit must be positive" }
-        return mutex.withLock { withContext(Dispatchers.IO) { load().take(limit) } }
+        return mutex.withLock {
+            withContext(Dispatchers.IO) { immutableSnapshot(load().take(limit)) }
+        }
     }
 
     override suspend fun replace(item: QueuedEvent): Unit = mutate { items ->
