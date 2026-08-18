@@ -19,7 +19,7 @@ The Kotlin SDK targets Android API 21+ and implements
 
 ## Installation
 
-The release workflow publishes version `1.0.1` through GitHub Packages. After
+The release workflow publishes version `1.1.0` through GitHub Packages. After
 the release tag is pushed, add the repository and credentials to your Gradle
 settings, then add the dependency:
 
@@ -37,7 +37,7 @@ repositories {
 
 ```kotlin
 dependencies {
-    implementation("dev.flextrack:flextrack:1.0.1")
+    implementation("dev.flextrack:flextrack:1.1.0")
 }
 ```
 
@@ -95,9 +95,10 @@ logger = AndroidLogcatLogger(
 ```
 
 Filter Logcat by the `FlexTrack` tag. Routing, delivery, failures, queueing,
-offline skips, retries, and flush summaries are reported. Event properties and
-PII are never included. `AndroidLogcatLogger` produces no output when the host
-application is not debuggable.
+offline skips, retries, and flush summaries are reported. `BASIC` logs only
+property keys. `VERBOSE` is an explicit debug-only opt-in that also prints
+property values, so it must not be used with real PII. `AndroidLogcatLogger`
+produces no output when the host application is not debuggable.
 
 All client operations are `suspend` functions. Call them from an application-
 owned coroutine scope. `FileEventQueue` stores failed/offline deliveries in the
@@ -132,11 +133,11 @@ example with functional screens for:
 ## Release
 
 The tag must match the version in `flextrack/build.gradle.kts`. Pushing a tag
-such as `v1.0.1` verifies the library and publishes it to GitHub Packages:
+such as `v1.1.0` verifies the library and publishes it to GitHub Packages:
 
 ```bash
-git tag v1.0.1
-git push origin v1.0.1
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
 ## License
