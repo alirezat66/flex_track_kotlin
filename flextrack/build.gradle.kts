@@ -1,11 +1,15 @@
+import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.SourcesJar
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    `maven-publish`
+    alias(libs.plugins.maven.publish)
 }
 
-group = "dev.flextrack"
-version = "1.1.0"
+group = "io.github.alirezat66"
+version = "1.2.0"
 
 android {
     namespace = "dev.flextrack"
@@ -40,12 +44,6 @@ android {
             it.useJUnitPlatform()
         }
     }
-
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-        }
-    }
 }
 
 dependencies {
@@ -59,53 +57,46 @@ dependencies {
     androidTestImplementation(libs.kotlinx.coroutines.test)
 }
 
-publishing {
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/alirezat66/flex_track_kotlin")
-            credentials {
-                username = providers.gradleProperty("gpr.user")
-                    .orElse(providers.environmentVariable("GITHUB_ACTOR"))
-                    .orNull
-                password = providers.gradleProperty("gpr.key")
-                    .orElse(providers.environmentVariable("GITHUB_TOKEN"))
-                    .orNull
+mavenPublishing {
+    configure(
+        AndroidSingleVariantLibrary(
+            variant = "release",
+            sourcesJar = SourcesJar.Sources(),
+            javadocJar = JavadocJar.Empty(),
+        ),
+    )
+    coordinates(
+        groupId = "io.github.alirezat66",
+        artifactId = "flextrack",
+        version = project.version.toString(),
+    )
+    publishToMavenCentral(automaticRelease = true)
+    signAllPublications()
+
+    pom {
+        name.set("FlexTrack Kotlin")
+        description.set("Consent-aware, deterministic analytics routing for Android and Kotlin.")
+        inceptionYear.set("2026")
+        url.set("https://github.com/alirezat66/flex_track_kotlin")
+        licenses {
+            license {
+                name.set("MIT License")
+                url.set("https://opensource.org/licenses/MIT")
+                distribution.set("repo")
             }
         }
-    }
-    publications {
-        register<MavenPublication>("release") {
-            groupId = project.group.toString()
-            artifactId = "flextrack"
-            version = project.version.toString()
-
-            afterEvaluate {
-                from(components["release"])
+        developers {
+            developer {
+                id.set("alirezat66")
+                name.set("Reza Taghizadeh")
+                email.set("alirezataghizadeh66@gmail.com")
+                url.set("https://github.com/alirezat66")
             }
-
-            pom {
-                name.set("FlexTrack Kotlin")
-                description.set("Consent-aware, deterministic analytics routing for Android and Kotlin.")
-                url.set("https://github.com/alirezat66/flex_track_kotlin")
-                licenses {
-                    license {
-                        name.set("MIT License")
-                        url.set("https://opensource.org/licenses/MIT")
-                    }
-                }
-                developers {
-                    developer {
-                        id.set("alirezat66")
-                        name.set("Reza Taghizadeh")
-                    }
-                }
-                scm {
-                    url.set("https://github.com/alirezat66/flex_track_kotlin")
-                    connection.set("scm:git:https://github.com/alirezat66/flex_track_kotlin.git")
-                    developerConnection.set("scm:git:ssh://git@github.com/alirezat66/flex_track_kotlin.git")
-                }
-            }
+        }
+        scm {
+            url.set("https://github.com/alirezat66/flex_track_kotlin")
+            connection.set("scm:git:git://github.com/alirezat66/flex_track_kotlin.git")
+            developerConnection.set("scm:git:ssh://git@github.com/alirezat66/flex_track_kotlin.git")
         }
     }
 }
