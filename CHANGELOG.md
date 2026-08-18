@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.1.0 - 2026-08-18
+
+### Added
+
+- Debug-only structured Logcat diagnostics with `OFF`, `BASIC`, and `VERBOSE`
+  policies.
+- Production-style Compose sample using MVVM, Hilt, StateFlow, Navigation,
+  and DataStore.
+- Shared Runtime MVP fixtures and Flutter/Kotlin conformance coverage.
+- On-device tests for durable queue recreation, malformed storage, concurrent
+  enqueue, consent/network controls, and delivery UI state.
+- Flutter–Kotlin parity documentation.
+
+### Changed
+
+- Serializes concurrent flush operations to prevent duplicate delivery.
+- Returns immutable queue snapshots and defensively copies tracker IDs.
+- Explains skipped routing decisions and property keys in debug logs.
+- Guarantees tracker initialization before sample event dispatch.
+- Updates AndroidX Test dependencies for Android 16 compatibility.
+
+### Compatibility
+
+- No migration is required from `1.0.1`.
+- Maven coordinates remain `dev.flextrack:flextrack`.
+- Core Specification remains `1.0.0`; Runtime Specification is `1.0.0`.
+
 ## 1.0.1 - 2026-08-17
 
 ### Changed
