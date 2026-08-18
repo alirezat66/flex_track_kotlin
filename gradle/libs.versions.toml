@@ -20,6 +20,7 @@ hilt = "2.57.1"
 hiltNavigationCompose = "1.3.0"
 ksp = "2.0.21-1.0.28"
 datastore = "1.2.0"
+mavenPublish = "0.37.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -58,3 +59,4 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }

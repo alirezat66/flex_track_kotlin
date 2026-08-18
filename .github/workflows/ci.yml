@@ -22,5 +22,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Validate wrapper
         uses: gradle/actions/wrapper-validation@v4
-      - name: Build, test, lint, and verify local publication
-        run: ./gradlew build lint :flextrack:publishToMavenLocal --stacktrace
+      - name: Build, test, and lint
+        run: ./gradlew build lint --stacktrace
+      - name: Verify publication metadata and artifacts
+        run: ./gradlew :flextrack:generatePomFileForMavenPublication :flextrack:generateMetadataFileForMavenPublication :flextrack:bundleReleaseAar :flextrack:sourceReleaseJar :flextrack:emptyJavadocJar --stacktrace

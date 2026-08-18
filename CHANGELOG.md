@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.2.0 - 2026-08-18
+
+### Added
+
+- Kotlin-native configuration and client builders.
+- Smart, GDPR, CCPA, privacy-region, and performance routing presets.
+- Versioned consent management and dynamic tracking context enrichment.
+- Public pattern matching, sampling, and validation utilities.
+- Thread-safe `RecordingTracker`/`MockTracker` and `NoOpTracker` implementations.
+- Typed tracker capability, lifecycle, registry diagnostics, and public failures.
+- Expanded package-level Flutter parity coverage with 168 tests.
+
+### Changed
+
+- Publishes from the Central Publisher Portal under
+  `io.github.alirezat66:flextrack` with signed sources and Javadoc artifacts.
+- Replaces authenticated GitHub Packages installation with public Maven Central
+  installation.
+
+### Compatibility
+
+- Kotlin source packages and the Android namespace remain `dev.flextrack`.
+- Existing `1.1.0` users only need to replace the Maven dependency coordinates.
+- Core and Runtime Specifications remain `1.0.0`.
+
 ## 1.1.0 - 2026-08-18
 
 ### Added

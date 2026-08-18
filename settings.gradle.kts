@@ -1,5 +1,8 @@
 pluginManagement {
     repositories {
+        maven("https://maven-central.storage-download.googleapis.com/maven2/") {
+            name = "GoogleMavenCentralMirror"
+        }
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -15,6 +18,9 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
+        maven("https://maven-central.storage-download.googleapis.com/maven2/") {
+            name = "GoogleMavenCentralMirror"
+        }
         mavenCentral()
     }
 }

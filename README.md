@@ -19,29 +19,14 @@ The Kotlin SDK targets Android API 21+ and implements
 
 ## Installation
 
-The release workflow publishes version `1.1.0` through GitHub Packages. After
-the release tag is pushed, add the repository and credentials to your Gradle
-settings, then add the dependency:
-
-```kotlin
-repositories {
-    maven {
-        url = uri("https://maven.pkg.github.com/alirezat66/flex_track_kotlin")
-        credentials {
-            username = providers.gradleProperty("gpr.user").orNull
-            password = providers.gradleProperty("gpr.key").orNull
-        }
-    }
-}
-```
+FlexTrack is published to Maven Central. No repository declaration or GitHub
+token is required when the project already uses `mavenCentral()`.
 
 ```kotlin
 dependencies {
-    implementation("dev.flextrack:flextrack:1.1.0")
+    implementation("io.github.alirezat66:flextrack:1.2.0")
 }
 ```
-
-GitHub Packages requires a GitHub username and a token with `read:packages`.
 
 ## Quick start
 
