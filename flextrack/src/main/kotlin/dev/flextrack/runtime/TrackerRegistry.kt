@@ -1,19 +1,30 @@
 package dev.flextrack.runtime
 
+import dev.flextrack.error.TrackerException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.CancellationException
 
 /** Thread-safe registry that owns tracker lifecycle. */
-public class TrackerRegistry {
+public class TrackerRegistry(initialTrackers: Iterable<Tracker> = emptyList()) {
     private val mutex: Mutex = Mutex()
     private val trackers: LinkedHashMap<String, Tracker> = linkedMapOf()
     private var started: Boolean = false
 
-    public suspend fun register(tracker: Tracker) {
-        require(tracker.id.isNotBlank()) { "tracker id cannot be blank" }
-        mutex.withLock {
+    init {
+        initialTrackers.forEach { tracker ->
+            require(tracker.id.isNotBlank()) { "tracker id cannot be blank" }
             require(tracker.id !in trackers) { "tracker '${tracker.id}' is already registered" }
+            trackers[tracker.id] = tracker
+        }
+    }
+
+    public suspend fun register(tracker: Tracker) {
+        if (tracker.id.isBlank()) throw TrackerException("tracker id cannot be blank", "INVALID_TRACKER_ID")
+        mutex.withLock {
+            if (tracker.id in trackers) throw TrackerException(
+                "tracker '${tracker.id}' is already registered", "DUPLICATE_TRACKER", trackerId = tracker.id,
+            )
             if (started) tracker.start()
             trackers[tracker.id] = tracker
         }
@@ -56,4 +67,8 @@ public class TrackerRegistry {
     }
 
     internal suspend fun snapshot(): Map<String, Tracker> = mutex.withLock { trackers.toMap() }
+
+    /** Returns diagnostics without exposing the registry's mutable storage. */
+    public suspend fun diagnostics(): Map<String, TrackerDiagnostics> =
+        snapshot().mapValues { (_, tracker) -> tracker.diagnostics() }
 }

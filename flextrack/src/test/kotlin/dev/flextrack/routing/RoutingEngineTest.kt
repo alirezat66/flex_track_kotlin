@@ -124,6 +124,38 @@ class RoutingEngineTest {
         assertEquals(listOf("analytics"), result.targetTrackers)
     }
 
+    @Test
+    fun `debug explains each failed condition instead of a generic mismatch`() {
+        val rule = RoutingRule(
+            id = "diagnostic",
+            eventNameRegex = Regex("^logout$"),
+            category = EventCategory.Security,
+            hasProperty = "reason",
+            targetGroup = analytics,
+        )
+
+        val decision = engine(rule).debug(
+            TestEvent(requiresConsent = false),
+            availableTrackers = available,
+        ).decisions.single()
+
+        assertTrue(decision.reason.orEmpty().contains("does not match /^logout$/"))
+        assertTrue(decision.reason.orEmpty().contains("Category mismatch"))
+        assertTrue(decision.reason.orEmpty().contains("Missing property 'reason'"))
+    }
+
+    @Test
+    fun `engine exposes configuration validation`() {
+        val config = RoutingConfiguration(
+            rules = listOf(
+                RoutingRule(id = "duplicate", isDefault = true, targetGroup = analytics),
+                RoutingRule(id = "duplicate", targetGroup = archive),
+            ),
+        )
+
+        assertTrue(RoutingEngine(config).validateConfiguration().single().contains("Duplicate rule IDs"))
+    }
+
     private fun engine(vararg rules: RoutingRule): RoutingEngine =
         RoutingEngine(RoutingConfiguration(rules.toList()))
 }

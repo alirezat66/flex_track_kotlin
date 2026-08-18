@@ -39,21 +39,37 @@ public data class RoutingRule(
     }
 
     public fun matches(event: FlexEvent, isDebugMode: Boolean = false): Boolean {
-        if (debugOnly && !isDebugMode) return false
-        if (productionOnly && isDebugMode) return false
-        if (eventType != null && !eventType.isAssignableFrom(event.originalEvent().javaClass)) return false
-        if (eventNameContains != null && !event.name.contains(eventNameContains)) return false
-        if (eventNameRegex != null && !eventNameRegex.containsMatchIn(event.name)) return false
-        if (category != null && event.category != category) return false
-        if (hasProperty != null) {
-            val properties = event.properties ?: return false
-            if (!properties.containsKey(hasProperty)) return false
-            if (propertyValue != null && properties[hasProperty] != propertyValue) return false
-        }
-        if (containsPII != null && event.containsPII != containsPII) return false
-        if (isHighVolume != null && event.isHighVolume != isHighVolume) return false
-        if (isEssential != null && event.isEssential != isEssential) return false
+        if (mismatchReasons(event, isDebugMode).isNotEmpty()) return false
         return true
+    }
+
+    /** Human-readable condition failures for inspector and Logcat diagnostics. */
+    public fun mismatchReasons(event: FlexEvent, isDebugMode: Boolean = false): List<String> = buildList {
+        if (debugOnly && !isDebugMode) add("Rule is debug-only but debug mode is disabled")
+        if (productionOnly && isDebugMode) add("Rule is production-only but debug mode is enabled")
+        if (eventType != null && !eventType.isAssignableFrom(event.originalEvent().javaClass)) {
+            add("Event type mismatch: expected ${eventType.simpleName}, got ${event.originalEvent().javaClass.simpleName}")
+        }
+        if (eventNameContains != null && !event.name.contains(eventNameContains)) {
+            add("Event name '${event.name}' does not contain '$eventNameContains'")
+        }
+        if (eventNameRegex != null && !eventNameRegex.containsMatchIn(event.name)) {
+            add("Event name '${event.name}' does not match /${eventNameRegex.pattern}/")
+        }
+        if (category != null && event.category != category) {
+            add("Category mismatch: expected ${category.name}, got ${event.category?.name}")
+        }
+        if (hasProperty != null) {
+            val properties = event.properties
+            if (properties == null || !properties.containsKey(hasProperty)) {
+                add("Missing property '$hasProperty'")
+            } else if (propertyValue != null && properties[hasProperty] != propertyValue) {
+                add("Property '$hasProperty' value mismatch")
+            }
+        }
+        if (containsPII != null && event.containsPII != containsPII) add("PII flag mismatch")
+        if (isHighVolume != null && event.isHighVolume != isHighVolume) add("High-volume flag mismatch")
+        if (isEssential != null && event.isEssential != isEssential) add("Essential flag mismatch")
     }
 
     public fun passesConsent(event: FlexEvent, consent: ConsentState): Boolean {

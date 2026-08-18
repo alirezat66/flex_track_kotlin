@@ -63,14 +63,15 @@ public class RoutingEngine(public val configuration: RoutingConfiguration) {
         val applied = result.appliedRules.toSet()
         val skipped = result.skippedRules.associate { it.rule to it.reason }
         val decisions = configuration.rules.map { rule ->
-            val matches = rule.matches(event, configuration.isDebugMode)
+            val mismatchReasons = rule.mismatchReasons(event, configuration.isDebugMode)
+            val matches = mismatchReasons.isEmpty()
             RuleDecision(
                 rule = rule,
                 matched = matches,
                 applied = rule in applied,
                 reason = when {
                     rule in skipped -> skipped[rule]
-                    !matches -> "Rule conditions did not match"
+                    !matches -> mismatchReasons.joinToString("; ")
                     rule !in applied -> "Lower priority tier was not evaluated"
                     else -> null
                 },
@@ -78,6 +79,8 @@ public class RoutingEngine(public val configuration: RoutingConfiguration) {
         }
         return RoutingDebugInfo(event, decisions, result)
     }
+
+    public fun validateConfiguration(): List<String> = configuration.validate()
 
     private fun resolve(group: TrackerGroup, available: Set<String>): List<String> =
         if (group.includesAll) available.toList()

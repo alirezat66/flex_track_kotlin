@@ -6,15 +6,12 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import dev.flextrack.routing.RoutingConfiguration
+import dev.flextrack.config.FlexTrackConfigurationBuilder
 import dev.flextrack.routing.ConsentState
-import dev.flextrack.logging.AndroidLogcatLogger
 import dev.flextrack.logging.FlexTrackLogLevel
-import dev.flextrack.routing.RoutingEngine
-import dev.flextrack.routing.RoutingRule
-import dev.flextrack.routing.TrackerGroup
-import dev.flextrack.runtime.FileEventQueue
 import dev.flextrack.runtime.FlexTrackClient
+import dev.flextrack.sample.analytics.ReliableDemoTracker
+import dev.flextrack.sample.analytics.RetryDemoTracker
 import dev.flextrack.sample.data.DemoPreferences
 import javax.inject.Singleton
 
@@ -26,38 +23,29 @@ object AnalyticsModule {
     fun provideClient(
         @ApplicationContext context: Context,
         preferences: DemoPreferences,
-    ): FlexTrackClient = FlexTrackClient(
-        routingEngine = RoutingEngine(
-            RoutingConfiguration(
-                rules = listOf(
-                    RoutingRule(
-                        id = "delivery-lab",
-                        eventNameContains = "sample_delivery_lab",
-                        targetGroup = TrackerGroup(
-                            "sample-destinations",
-                            listOf("sample_reliable", "sample_retry"),
-                        ),
-                        requireConsent = false,
-                        priority = 100,
-                    ),
-                    RoutingRule(
-                        id = "sample-default",
-                        isDefault = true,
-                        targetGroup = TrackerGroup(
-                            "sample-default-destination",
-                            listOf("sample_reliable"),
-                        ),
-                        requireConsent = true,
-                        priority = 0,
-                    ),
-                ),
-            ),
-        ),
-        queue = FileEventQueue(context),
-        consentProvider = { ConsentState(general = preferences.consentNow()) },
-        onlineProvider = preferences::onlineNow,
+        reliableTracker: ReliableDemoTracker,
+        retryTracker: RetryDemoTracker,
+    ): FlexTrackClient = FlexTrackConfigurationBuilder(context).apply {
+        tracker(reliableTracker)
+        tracker(retryTracker)
+        persistentQueue()
+        consent { ConsentState(general = preferences.consentNow()) }
+        network(preferences::onlineNow)
+        routing {
+            defineGroup("sample-destinations", "sample_reliable", "sample_retry")
+            routeNamed("sample_delivery_lab") {
+                toGroup("sample-destinations")
+                skipConsent()
+                priority(100)
+                id("delivery-lab")
+            }
+            routeDefault {
+                toTracker("sample_reliable")
+                id("sample-default")
+            }
+        }
         // The sample intentionally exposes payload values to demonstrate debugging.
         // AndroidLogcatLogger still disables itself for non-debuggable builds.
-        logger = AndroidLogcatLogger(context, FlexTrackLogLevel.VERBOSE),
-    )
+        logging(FlexTrackLogLevel.VERBOSE)
+    }.buildUnstarted()
 }

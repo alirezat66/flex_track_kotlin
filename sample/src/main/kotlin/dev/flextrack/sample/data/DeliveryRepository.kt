@@ -31,8 +31,6 @@ class DeliveryRepository @Inject constructor(
     suspend fun initialize(): FlushResult = initializationMutex.withLock {
         if (!initialized) {
             preferences.initialize()
-            client.register(reliableTracker)
-            client.register(retryTracker)
             client.start()
             initialized = true
         }
